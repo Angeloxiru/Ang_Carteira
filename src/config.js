@@ -14,7 +14,7 @@ export const SPREADSHEET_ID = '1h_QRbk94w9FLo4zplaIoMhE_bp7_1AFk14TNGK3HjbE';
  * Deixe vazio para o app abrir a tela de configuração explicando o passo a passo.
  * Veja o README.md, seção "Gerando a API Key".
  */
-export const API_KEY = '';
+export const API_KEY = 'AIzaSyCz-xRZrmS9bX4dVcJCNninEW41uW2ypb4';
 
 /* --------------------------- Layout da planilha --------------------------- */
 
