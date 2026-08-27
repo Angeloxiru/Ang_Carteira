@@ -25,7 +25,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Avisar se a API Key não foi configurada
         run: |
@@ -33,14 +33,15 @@ jobs:
             echo "::warning file=src/config.js::API_KEY está vazia — o app vai abrir na tela de configuração."
           fi
 
-      - name: Desligar o processamento Jekyll do Pages
-        run: touch .nojekyll
+      # enablement: true liga o Pages (modo GitHub Actions) na primeira execução,
+      # em vez de exigir que alguém configure em Settings -> Pages antes.
+      - uses: actions/configure-pages@v6
+        with:
+          enablement: true
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: .
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

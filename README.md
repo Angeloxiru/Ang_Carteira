@@ -105,9 +105,14 @@ que é a base de layout do projeto.
 ## Deploy
 
 `.github/workflows/deploy.yml` publica no GitHub Pages a cada push na `main`.
-Habilite uma vez em **Settings → Pages → Source: GitHub Actions**.
-
 Como não há build, o repositório inteiro vira o site.
+
+O workflow usa `enablement: true`, então ele mesmo liga o Pages no modo
+"GitHub Actions" na primeira execução — não é preciso configurar nada antes.
+
+Se mesmo assim aparecer **"Get Pages site failed ... Not Found"**, é porque a
+conta não deixou o workflow ligar o Pages sozinho. Nesse caso, habilite à mão
+em **Settings → Pages → Source: GitHub Actions** e rode o workflow de novo.
 
 **Ao alterar arquivos do app**, suba o `CACHE_VERSION` em `sw.js` (`v1` → `v2`)
 para que o service worker descarte o cache antigo nos celulares já instalados.
