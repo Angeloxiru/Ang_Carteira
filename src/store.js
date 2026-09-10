@@ -2,6 +2,10 @@
    Store minimalista feito à mão — não vale a pena uma lib para 3 telas. */
 
 import { fetchEstrategia, fetchLog, writeRanges, isConfigured, SheetsError } from './api/sheets.js';
+import {
+  isAuthConfigured, hasValidToken, hasGrantedBefore,
+  requestToken, requestTokenSilently, forgetToken, signOut,
+} from './api/auth.js';
 import { parseTickers, parseLog, buildWriteBlocks } from './models.js';
 
 const CACHE_KEY = 'carteira:cache:v1';
@@ -25,6 +29,9 @@ export const state = {
   logFromCache: false,
   online: navigator.onLine,
   configured: isConfigured(),
+  // Login: só é exigido para salvar; a leitura é pública.
+  authConfigured: isAuthConfigured(),
+  authorized: false,
 };
 
 /* ------------------------------ Assinaturas ------------------------------- */
@@ -136,17 +143,63 @@ export async function refreshAll() {
   await Promise.all(jobs);
 }
 
+/* ------------------------------- Autenticação ------------------------------ */
+
+function syncAuthState() {
+  state.authorized = hasValidToken();
+  emit();
+}
+
+/** Tenta renovar o token sem interface, se o usuário já autorizou antes. */
+export async function restoreSession() {
+  if (!state.authConfigured || !hasGrantedBefore()) return;
+  await requestTokenSilently();
+  syncAuthState();
+}
+
+/** Abre o login do Google. Precisa vir de um clique (o pop-up depende disso). */
+export async function signIn() {
+  await requestToken();
+  syncAuthState();
+}
+
+export function signOutUser() {
+  signOut();
+  syncAuthState();
+}
+
 /* --------------------------------- Escrita -------------------------------- */
 
 /**
  * Salva os campos editáveis de um ticker e recarrega a planilha para confirmar.
  * Concorrência: last-write-wins, por decisão do projeto.
+ *
+ * Precisa de token OAuth: o Google não aceita API Key em escrita. Se a chamada
+ * voltar 401 (token revogado ou expirado antes da hora), pede um novo token uma
+ * vez e repete — por isso deve ser chamado de dentro de um clique.
  */
 export async function saveTicker(ticker, draft) {
   if (!state.online) {
     throw new SheetsError('Você está offline', { hint: 'A edição só funciona com internet.' });
   }
-  await writeRanges(buildWriteBlocks(ticker, draft));
+
+  const blocks = buildWriteBlocks(ticker, draft);
+  let token = await requestToken();
+  syncAuthState();
+
+  try {
+    await writeRanges(blocks, token);
+  } catch (err) {
+    if (err instanceof SheetsError && err.status === 401) {
+      forgetToken();
+      token = await requestToken();
+      syncAuthState();
+      await writeRanges(blocks, token);
+    } else {
+      throw err;
+    }
+  }
+
   await loadEstrategia({ force: true });
 }
 

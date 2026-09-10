@@ -3,6 +3,7 @@
 import { el, clear } from '../components/dom.js';
 import { tickerCard } from '../components/tickerCard.js';
 import { statusBar } from '../components/statusBar.js';
+import { authBar } from '../components/authBar.js';
 import { attachPullToRefresh } from '../components/pullToRefresh.js';
 import { STALE_MS } from '../config.js';
 import { state, subscribe, loadEstrategia } from '../store.js';
@@ -91,6 +92,7 @@ export function dashboardView(_params, outlet) {
         error: state.errorEstrategia,
         onRefresh: () => loadEstrategia({ force: true }),
       }),
+      authBar(),
       renderFilters(),
       renderList(),
     );

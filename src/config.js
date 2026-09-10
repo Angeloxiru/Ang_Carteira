@@ -16,6 +16,15 @@ export const SPREADSHEET_ID = '1h_QRbk94w9FLo4zplaIoMhE_bp7_1AFk14TNGK3HjbE';
  */
 export const API_KEY = 'AIzaSyCz-xRZrmS9bX4dVcJCNninEW41uW2ypb4';
 
+/**
+ * ID do cliente OAuth (tipo "Aplicativo da Web") do Google Cloud Console.
+ * Necessário SÓ para salvar: a leitura continua pública, via API Key.
+ * O Google não aceita API Key em escrita, então gravar exige login.
+ * Formato: '1234567890-abcdefg.apps.googleusercontent.com'
+ * Veja o README.md, seção "Login para edição (OAuth)".
+ */
+export const GOOGLE_CLIENT_ID = '';
+
 /* --------------------------- Layout da planilha --------------------------- */
 
 /** Aba de estratégia. Cabeçalho vai até a linha 4; os dados começam na 5. */

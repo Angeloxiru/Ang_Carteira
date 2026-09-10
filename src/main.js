@@ -7,7 +7,7 @@ import { dashboardView } from './views/dashboard.js';
 import { tickerDetailView } from './views/tickerDetail.js';
 import { logView } from './views/log.js';
 import { statsView } from './views/stats.js';
-import { state, hydrateFromCache, refreshAll, subscribe } from './store.js';
+import { state, hydrateFromCache, refreshAll, subscribe, restoreSession } from './store.js';
 import { STALE_MS } from './config.js';
 
 /* --------------------------------- Rotas ---------------------------------- */
@@ -72,6 +72,9 @@ app.append(buildOfflineBanner(), outlet, buildNav());
 
 hydrateFromCache();
 start(outlet);
+
+// Renova o login em silêncio quando já houve autorização neste navegador.
+restoreSession();
 
 // Revalida ao voltar para o app (padrão: dados frescos a cada abertura).
 document.addEventListener('visibilitychange', () => {
