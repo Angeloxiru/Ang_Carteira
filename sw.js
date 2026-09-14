@@ -4,7 +4,7 @@
    - POST da Sheets API (gravação): nunca cacheia, sempre rede.
    Ao mudar arquivos do app, suba o CACHE_VERSION para invalidar o cache antigo. */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const SHELL_CACHE = `carteira-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `carteira-data-${CACHE_VERSION}`;
 const SHEETS_HOST = 'sheets.googleapis.com';
@@ -21,6 +21,7 @@ const SHELL_ASSETS = [
   './src/store.js',
   './src/models.js',
   './src/api/sheets.js',
+  './src/api/auth.js',
   './src/utils/format.js',
   './src/components/dom.js',
   './src/components/icons.js',
@@ -29,6 +30,7 @@ const SHELL_ASSETS = [
   './src/components/distance.js',
   './src/components/tickerCard.js',
   './src/components/statusBar.js',
+  './src/components/authBar.js',
   './src/components/pullToRefresh.js',
   './src/views/dashboard.js',
   './src/views/tickerDetail.js',

@@ -37,10 +37,14 @@ function describe(status, apiMessage) {
   switch (status) {
     case 400:
       return ['Requisição inválida', apiMessage || 'Confira o nome das abas em src/config.js.'];
+    case 401:
+      return ['Sessão expirada (401)', apiMessage ||
+        'Entre de novo com a conta Google dona da planilha para salvar.'];
     case 403:
       return ['Acesso negado (403)', apiMessage ||
-        'A API Key pode estar restrita a outro domínio, a Sheets API pode estar desabilitada, ' +
-        'ou a planilha não está compartilhada como "qualquer pessoa com o link".'];
+        'Na leitura: a API Key pode estar restrita a outro domínio, a Sheets API pode estar ' +
+        'desabilitada, ou a planilha não está compartilhada por link. ' +
+        'Ao salvar: a conta que entrou não tem permissão de edição na planilha.'];
     case 404:
       return ['Planilha não encontrada (404)', 'Confira o SPREADSHEET_ID em src/config.js.'];
     case 429:
@@ -159,14 +163,27 @@ export async function fetchLog() {
 /**
  * Grava os campos editáveis de um ticker em uma única chamada.
  * `blocks` é um array de { range, values } já montado por models.js.
+ *
+ * Escrita NÃO aceita API Key: o Google exige uma credencial que identifique
+ * uma pessoa ("assert a principal"), então vai um access token OAuth no
+ * cabeçalho Authorization. Quem cuida de obter esse token é o store.
+ *
  * Estratégia de concorrência: last-write-wins, sem merge (decisão do projeto).
  */
-export async function writeRanges(blocks) {
+export async function writeRanges(blocks, accessToken) {
   assertConfigured();
-  const qs = new URLSearchParams({ key: API_KEY });
-  return request(`${BASE}/${SPREADSHEET_ID}/values:batchUpdate?${qs}`, {
+  if (!accessToken) {
+    throw new SheetsError('Sem autorização para salvar', {
+      status: 401,
+      hint: 'Entre com a conta Google dona da planilha.',
+    });
+  }
+  return request(`${BASE}/${SPREADSHEET_ID}/values:batchUpdate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data: blocks }),
   }, { retries: 2 });
 }

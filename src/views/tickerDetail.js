@@ -188,7 +188,9 @@ export function tickerDetailView(params, outlet) {
   function refreshFooter() {
     const canSave = isDirty() && invalid.size === 0 && state.online && !saving;
     saveBtn.disabled = !canSave;
-    saveBtn.textContent = saving ? 'Salvando…' : 'Salvar';
+    // Deixa claro que o clique vai abrir o login, antes do pop-up aparecer.
+    saveBtn.textContent = saving ? 'Salvando…'
+      : (state.authorized ? 'Salvar' : 'Entrar e salvar');
     footer.classList.toggle('is-dirty', isDirty());
   }
 
@@ -248,6 +250,10 @@ export function tickerDetailView(params, outlet) {
     if (!state.online) {
       content.appendChild(el('p', { class: 'notice notice--warn' },
         'Sem conexão: os campos ficam somente leitura até a rede voltar.'));
+    } else if (!state.authorized) {
+      content.appendChild(el('p', { class: 'notice notice--info' },
+        'Consultar é livre, mas salvar exige entrar com a conta Google que edita '
+        + 'a planilha. O login é pedido no momento de salvar e vale por algumas horas.'));
     }
 
     root.appendChild(footer);

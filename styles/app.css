@@ -524,3 +524,56 @@ select.input {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* --------------------------------- Login ---------------------------------- */
+
+.authbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: 14px;
+  padding: 8px 8px 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.authbar__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.authbar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex: 0 0 auto;
+}
+
+.authbar__btn {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+.authbar__btn:active { background: var(--bg); }
+.authbar__btn:disabled { opacity: 0.55; }
+.authbar__btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06121f;
+  font-weight: 600;
+}
+
+.authbar--off { color: var(--yellow); border-color: #4a3a12; background: var(--yellow-dim); }
+.authbar--off .authbar__text { color: #f0d089; }
