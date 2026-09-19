@@ -10,7 +10,7 @@ export function authBar() {
   if (!state.authConfigured) {
     return el('div', { class: 'authbar authbar--off' },
       el('span', { class: 'authbar__text' },
-        'Edição indisponível: falta configurar o login (GOOGLE_CLIENT_ID).'));
+        'Só leitura: falta configurar o login para editar (veja o README).'));
   }
 
   if (state.authorized) {
