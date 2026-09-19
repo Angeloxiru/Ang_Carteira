@@ -74,6 +74,18 @@ Não existe configuração de planilha que contorne isso: gravar exige uma
 credencial que identifique **uma pessoa**. Por isso o app pede login com a conta
 Google no momento de salvar. Consultar continua público e sem login.
 
+> **O ID do cliente identifica o APP, não a pessoa.** Ele é o "crachá" do
+> Carteira perante o Google — fixo, público e o mesmo para todo mundo, como a
+> placa de uma loja. Quem entra é decidido no login: cada pessoa que toca em
+> "Entrar com Google" recebe um token emitido para a **conta dela**, e o app
+> nunca sabe a senha de ninguém. Por isso o ID fica no `config.js` e não há
+> nada de secreto nele: todo site com login do Google expõe o seu no código da
+> página. O que protege é a lista de **Origens JavaScript autorizadas** (só
+> páginas do seu domínio podem usar esse ID) e, principalmente, o
+> compartilhamento da planilha — quem entrar com outra conta recebe um token
+> válido, mas a Sheets API recusa a gravação com 403 se aquela conta não tiver
+> permissão de edição na planilha.
+
 1. No mesmo projeto do Google Cloud Console, vá em **APIs e serviços → Tela de
    permissão OAuth**. Escolha **Externo** e preencha o básico (nome do app,
    e-mail de contato).
