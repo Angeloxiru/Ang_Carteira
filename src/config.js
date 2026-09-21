@@ -23,7 +23,7 @@ export const API_KEY = 'AIzaSyCz-xRZrmS9bX4dVcJCNninEW41uW2ypb4';
  * Formato: '1234567890-abcdefg.apps.googleusercontent.com'
  * Veja o README.md, seção "Login para edição (OAuth)".
  */
-export const GOOGLE_CLIENT_ID = '';
+export const GOOGLE_CLIENT_ID = '961984810982-70d3ai052n161luv83lpcea0qv45fnau.apps.googleusercontent.com';
 
 /* --------------------------- Layout da planilha --------------------------- */
 
