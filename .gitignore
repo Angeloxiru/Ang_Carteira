@@ -1,0 +1,3 @@
+# Gerado pelo deploy (.github/workflows/deploy.yml), não versionado:
+# a versão publicada é sempre o SHA do commit que a publicou.
+/version.json

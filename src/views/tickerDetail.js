@@ -13,6 +13,7 @@ import {
 import { STALE_MS } from '../config.js';
 import { state, subscribe, getTicker, loadEstrategia, saveTicker } from '../store.js';
 import { navigate } from '../router.js';
+import { registerReloadBlocker } from '../updater.js';
 
 export function tickerDetailView(params, outlet) {
   const ativo = params.ativo;
@@ -292,12 +293,17 @@ export function tickerDetailView(params, outlet) {
   const guard = (e) => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } };
   window.addEventListener('beforeunload', guard);
 
+  // Impede que uma atualização recarregue a página por cima do que está sendo
+  // digitado — nesse caso o app mostra a barra "Nova versão disponível".
+  const unblockReload = registerReloadBlocker(isDirty);
+
   render();
   loadEstrategia({ maxAge: STALE_MS });
 
   return {
     destroy: () => {
       unsubscribe();
+      unblockReload();
       window.removeEventListener('beforeunload', guard);
       footer.remove();
     },

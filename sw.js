@@ -2,11 +2,23 @@
    - Arquivos do app: cache-first (com revalidação em segundo plano).
    - GET da Sheets API: network-first com fallback para o cache (modo offline).
    - POST da Sheets API (gravação): nunca cacheia, sempre rede.
-   Ao mudar arquivos do app, suba o CACHE_VERSION para invalidar o cache antigo. */
+   - version.json: sempre da rede, nunca cacheado (é o que denuncia versão velha).
 
-const CACHE_VERSION = 'v2';
-const SHELL_CACHE = `carteira-shell-${CACHE_VERSION}`;
-const DATA_CACHE = `carteira-data-${CACHE_VERSION}`;
+   BUILD_ID é substituído pelo SHA do commit no deploy
+   (.github/workflows/deploy.yml). Assim todo deploy gera um sw.js diferente em
+   bytes, o navegador reinstala e o cache antigo é descartado — sem depender de
+   alguém lembrar de subir uma constante à mão. */
+
+const BUILD_ID = 'dev';
+
+/* O cache do app é versionado: cada deploy começa um limpo, e a troca é
+   atômica (nunca mistura arquivo novo com arquivo velho). */
+const SHELL_CACHE = `carteira-shell-${BUILD_ID}`;
+
+/* O cache de dados NÃO é versionado de propósito: ele guarda a última leitura
+   da planilha para o modo offline, e seria cruel apagar isso a cada deploy. */
+const DATA_CACHE = 'carteira-data';
+
 const SHEETS_HOST = 'sheets.googleapis.com';
 
 /* Caminhos relativos ao sw.js, que fica na raiz do app. */
@@ -17,6 +29,8 @@ const SHELL_ASSETS = [
   './styles/app.css',
   './src/main.js',
   './src/config.js',
+  './src/version.js',
+  './src/updater.js',
   './src/router.js',
   './src/store.js',
   './src/models.js',
@@ -48,15 +62,20 @@ self.addEventListener('install', (event) => {
     // addAll falha inteiro se um arquivo faltar; adiciona um a um para ser tolerante.
     await Promise.all(SHELL_ASSETS.map((asset) =>
       cache.add(new Request(asset, { cache: 'reload' })).catch(() => {})));
-    self.skipWaiting();
   })());
+});
+
+/* Quem manda ativar é a página, via updater.js: ela só libera quando não há
+   edição pendente, para não recarregar por cima de algo sendo digitado. */
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'skip-waiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys
-      .filter((k) => k.startsWith('carteira-') && k !== SHELL_CACHE && k !== DATA_CACHE)
+      .filter((k) => k.startsWith('carteira-shell-') && k !== SHELL_CACHE)
       .map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
@@ -103,6 +122,12 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Nunca cacheado: é justamente o arquivo que revela que o app está velho.
+  if (url.pathname.endsWith('/version.json')) {
+    event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => Response.error()));
+    return;
+  }
 
   // Navegação (abrir o app, F5): devolve o index.html cacheado quando offline.
   if (request.mode === 'navigate') {

@@ -27,6 +27,26 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Carimba o SHA do commit no app e no service worker. É o que garante que
+      # todo deploy gere um sw.js diferente em bytes: o navegador reinstala, o
+      # cache antigo é descartado e ninguém fica preso numa versão velha.
+      # Antes isso dependia de lembrar de subir CACHE_VERSION à mão — e não deu certo.
+      - name: Carimbar a versão do build
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_SHA::7}"
+          BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          sed -i "s|^const BUILD_ID = 'dev';|const BUILD_ID = '${VERSION}';|" sw.js
+          sed -i "s|^export const APP_VERSION = 'dev';|export const APP_VERSION = '${VERSION}';|" src/version.js
+          printf '{"version":"%s","builtAt":"%s"}\n' "$VERSION" "$BUILT_AT" > version.json
+
+          # Falha o deploy se algum carimbo não pegou: publicar sem versão nova
+          # recriaria exatamente o bug de cache que isto existe para evitar.
+          grep -q "^const BUILD_ID = '${VERSION}';" sw.js
+          grep -q "^export const APP_VERSION = '${VERSION}';" src/version.js
+          echo "Versão publicada: ${VERSION} (${BUILT_AT})"
+
       - name: Avisar se a API Key não foi configurada
         run: |
           if grep -qE "^export const API_KEY = '';" src/config.js; then

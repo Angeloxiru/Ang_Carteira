@@ -8,6 +8,7 @@ import { attachPullToRefresh } from '../components/pullToRefresh.js';
 import { STALE_MS } from '../config.js';
 import { state, subscribe, loadEstrategia } from '../store.js';
 import { setupNotice } from './setup.js';
+import { APP_VERSION } from '../version.js';
 
 const FILTERS = [
   { id: 'todos', label: 'Todos', test: () => true },
@@ -95,6 +96,8 @@ export function dashboardView(_params, outlet) {
       authBar(),
       renderFilters(),
       renderList(),
+      // Permite conferir, no próprio celular, qual versão está rodando.
+      el('p', { class: 'buildtag' }, `versão ${APP_VERSION}`),
     );
   }
 
