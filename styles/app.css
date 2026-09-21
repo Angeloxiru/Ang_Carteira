@@ -102,6 +102,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .notice--error { border-color: #58211f; background: var(--red-dim); color: #ffb3ae; }
 .notice--info { border-color: var(--border); color: var(--muted); }
 
+/* Aviso que abre o formulário de edição (offline, login pendente, etc.). */
+.view__content--form > .notice { margin-bottom: 18px; }
+
 .offlinebar {
   position: sticky;
   top: 0;

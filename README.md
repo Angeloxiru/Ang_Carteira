@@ -74,22 +74,124 @@ Não existe configuração de planilha que contorne isso: gravar exige uma
 credencial que identifique **uma pessoa**. Por isso o app pede login com a conta
 Google no momento de salvar. Consultar continua público e sem login.
 
-1. No mesmo projeto do Google Cloud Console, vá em **APIs e serviços → Tela de
-   permissão OAuth**. Escolha **Externo** e preencha o básico (nome do app,
-   e-mail de contato).
-2. Deixe a publicação em **Testing** e adicione o seu próprio e-mail em
-   **Usuários de teste**. Assim não precisa de verificação do Google.
-   Na primeira vez aparece um aviso *"O Google não verificou este app"* →
-   **Avançado → Acessar (não seguro)**. É esperado para um app pessoal.
-3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**.
-4. Em **Origens JavaScript autorizadas**, adicione (sem barra no fim):
+> **O ID do cliente identifica o APP, não a pessoa.** Ele é o "crachá" do
+> Carteira perante o Google — fixo, público e o mesmo para todo mundo, como a
+> placa de uma loja. Quem entra é decidido no login: cada pessoa que toca em
+> "Entrar com Google" recebe um token emitido para a **conta dela**, e o app
+> nunca sabe a senha de ninguém. Por isso o ID fica no `config.js` e não há
+> nada de secreto nele: todo site com login do Google expõe o seu no código da
+> página. O que protege é a lista de **Origens JavaScript autorizadas** (só
+> páginas do seu domínio podem usar esse ID) e, principalmente, o
+> compartilhamento da planilha — quem entrar com outra conta recebe um token
+> válido, mas a Sheets API recusa a gravação com 403 se aquela conta não tiver
+> permissão de edição na planilha.
+
+#### Passo a passo
+
+O Google reorganizou essa área: o que antes era "Tela de permissão OAuth" hoje
+se chama **Google Auth Platform**, com as abas **Branding**, **Audience**,
+**Data Access** e **Clients**. O caminho abaixo é o atual.
+
+**a) Abrir a Google Auth Platform**
+
+Vá para <https://console.cloud.google.com/auth/overview> e confirme, no seletor
+do topo, que está **no mesmo projeto** onde você criou a API Key. Se for a
+primeira vez, aparece um botão **Get started / Começar** — ele abre um
+assistente de página única que cobre os itens (b) e (c) de uma vez.
+
+**b) Branding** (identidade do app na tela de login)
+
+- **App name**: `Carteira` (é o nome que aparece no "… quer acessar sua Conta
+  do Google")
+- **User support email**: seu e-mail
+- **Developer contact information**: o mesmo e-mail
+- Logo e links são opcionais — deixe em branco
+
+**c) Audience** (quem pode entrar)
+
+- Escolha **External / Externo**. "Internal" só existe para contas Workspace de
+  empresa e não serve para uma conta `@gmail.com`.
+- Deixe o status de publicação em **Testing** — assim você não precisa passar
+  pela verificação do Google.
+- Em **Test users**, clique **Add users** e adicione **o seu próprio e-mail**.
+  Sem isso o login falha com `access_denied`, mesmo sendo você o dono do
+  projeto. É o erro mais comum aqui.
+
+**d) Data Access** (a permissão pedida)
+
+Clique **Add or remove scopes**, procure por `spreadsheets` e marque:
+
+```
+https://www.googleapis.com/auth/spreadsheets
+```
+
+Em modo Testing o app costuma funcionar mesmo sem registrar o escopo aqui, mas
+registrar evita um erro chato e deixa a tela de consentimento descrever
+corretamente o que está sendo pedido.
+
+**e) Clients** (o ID do cliente, que é o que vai no código)
+
+1. Aba **Clients** → **Create client**.
+2. **Application type**: **Web application**. Não use "Desktop", "Android" nem
+   "iOS" — só o tipo Web aceita origens JavaScript.
+3. **Name**: `Carteira PWA` (uso interno, aparece só no console).
+4. **Authorized JavaScript origins** → **Add URI**, uma entrada por linha:
    ```
-   https://<seu-usuario>.github.io
+   https://angeloxiru.github.io
    http://localhost:8000
    ```
-   *Não* preencha "URIs de redirecionamento" — o fluxo de token do Google
-   Identity Services não usa redirecionamento.
-5. Copie o ID do cliente para `GOOGLE_CLIENT_ID` em `src/config.js`.
+5. **Authorized redirect URIs**: deixe **vazio**. O fluxo de token do Google
+   Identity Services abre um pop-up e devolve o token ali mesmo — não existe
+   redirecionamento para registrar.
+6. **Create**. Copie o **Client ID** (termina em
+   `.apps.googleusercontent.com`). Ignore o "Client secret": este fluxo roda no
+   navegador e não usa segredo nenhum.
+
+**f) Colar no projeto**
+
+Em `src/config.js`:
+
+```js
+export const GOOGLE_CLIENT_ID = '1234567890-abcdefg.apps.googleusercontent.com';
+```
+
+Commit e push na `main`; o deploy republica sozinho.
+
+#### Cuidado com o formato da origem
+
+Uma **origem** é só `esquema + domínio + porta` — **nunca** inclui caminho nem
+barra final. É o engano mais frequente:
+
+| | |
+|---|---|
+| ✅ | `https://angeloxiru.github.io` |
+| ❌ | `https://angeloxiru.github.io/` — barra no fim |
+| ❌ | `https://angeloxiru.github.io/Ang_Carteira` — caminho não entra |
+| ❌ | `https://angeloxiru.github.io/Ang_Carteira/` — os dois erros juntos |
+
+O app mora em `https://angeloxiru.github.io/Ang_Carteira/`, mas a origem dele
+é `https://angeloxiru.github.io` — sem o nome do repositório.
+
+#### Se der erro no login
+
+| O que aparece | Causa provável |
+|---|---|
+| `access_denied` logo ao entrar | Seu e-mail não está em **Test users** (item c) |
+| Erro citando *origin* / `invalid_client` | A origem não bate com a registrada — quase sempre barra final ou caminho a mais |
+| Nada acontece ao tocar em Entrar | Pop-up bloqueado pelo navegador; libere pop-ups para o site |
+| Funcionava e parou depois de uns dias | Em modo Testing a autorização expira periodicamente — é só entrar de novo |
+| Salvou e voltou **403** | O login deu certo, mas *aquela conta* não tem permissão de edição na planilha (veja o passo 3) |
+
+Mudanças no ID do cliente podem levar alguns minutos para valer. Se acabou de
+salvar e ainda dá erro, espere um pouco e recarregue.
+
+#### O aviso de "app não verificado"
+
+Na primeira entrada o Google mostra *"O Google não verificou este app"*. Clique
+**Avançado → Acessar (não seguro)**. É o comportamento normal de um app pessoal
+em modo Testing — a verificação só é exigida para apps distribuídos ao público.
+
+#### Sobre o token
 
 O token fica só na memória da aba, nunca no `localStorage`, e vale cerca de uma
 hora. Depois disso o app renova em silêncio enquanto houver sessão Google ativa

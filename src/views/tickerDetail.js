@@ -28,6 +28,11 @@ export function tickerDetailView(params, outlet) {
 
   const isDirty = () => Boolean(ticker && draft && draftIsDirty(ticker, draft));
 
+  /* Sem rede não dá para gravar; sem GOOGLE_CLIENT_ID não dá para autenticar,
+     e o Google recusa escrita sem autenticação. Nos dois casos os campos ficam
+     somente leitura, em vez de deixar digitar e falhar só no Salvar. */
+  const canEdit = () => state.online && state.authConfigured;
+
   /* ------------------------------- Blocos -------------------------------- */
 
   function header() {
@@ -92,7 +97,7 @@ export function tickerDetailView(params, outlet) {
       autocomplete: 'off',
       placeholder: index === 2 ? 'opcional' : '0,00',
       value: value === null ? '' : fmtNum(value, 2),
-      disabled: !state.online,
+      disabled: !canEdit(),
       oninput: (e) => {
         const raw = e.target.value.trim();
         if (raw === '') {
@@ -137,7 +142,7 @@ export function tickerDetailView(params, outlet) {
     return el('div', { class: 'field' },
       el('label', { class: 'field__label', for: id }, label),
       el('select', {
-        class: 'input', id, disabled: !state.online,
+        class: 'input', id, disabled: !canEdit(),
         onchange: (e) => { draft[key] = e.target.value; refreshFooter(); },
       },
         // Preserva um valor fora do enum, se a planilha tiver algo diferente.
@@ -168,7 +173,7 @@ export function tickerDetailView(params, outlet) {
         rows: '5',
         placeholder,
         value: draft[key],
-        disabled: !state.online,
+        disabled: !canEdit(),
         oninput: (e) => { draft[key] = e.target.value; refreshFooter(); },
       }),
     );
@@ -179,6 +184,33 @@ export function tickerDetailView(params, outlet) {
       `Atualizado em ${fmtDate(ticker.atualizadoEm)} · linha ${ticker.row} da planilha`);
   }
 
+  /**
+   * Explica por que o formulário está travado. Fica no topo, logo abaixo do
+   * cabeçalho: se os campos estão somente leitura, o motivo precisa aparecer
+   * antes deles, não depois de rolar a tela inteira.
+   */
+  function editNotice() {
+    if (!state.online) {
+      return el('p', { class: 'notice notice--warn' },
+        el('strong', null, 'Sem conexão'),
+        'Os campos ficam somente leitura até a rede voltar.');
+    }
+    if (!state.authConfigured) {
+      return el('p', { class: 'notice notice--warn' },
+        el('strong', null, 'Edição desativada'),
+        'O Google não permite gravar sem login, e o login ainda não foi '
+        + 'configurado. Falta criar um ID de cliente OAuth e preencher '
+        + 'GOOGLE_CLIENT_ID em src/config.js — o passo a passo está no README, '
+        + 'em "Login para edição (OAuth)". Até lá, edite pela planilha.');
+    }
+    if (!state.authorized) {
+      return el('p', { class: 'notice notice--info' },
+        'Consultar é livre, mas salvar exige entrar com a conta Google que edita '
+        + 'a planilha. O login é pedido no momento de salvar e vale por algumas horas.');
+    }
+    return null;
+  }
+
   /* -------------------------------- Rodapé -------------------------------- */
 
   const saveBtn = el('button', { class: 'btn btn--primary', type: 'button' }, 'Salvar');
@@ -186,11 +218,12 @@ export function tickerDetailView(params, outlet) {
   const footer = el('div', { class: 'formbar' }, cancelBtn, saveBtn);
 
   function refreshFooter() {
-    const canSave = isDirty() && invalid.size === 0 && state.online && !saving;
+    const canSave = isDirty() && invalid.size === 0 && canEdit() && !saving;
     saveBtn.disabled = !canSave;
-    // Deixa claro que o clique vai abrir o login, antes do pop-up aparecer.
-    saveBtn.textContent = saving ? 'Salvando…'
-      : (state.authorized ? 'Salvar' : 'Entrar e salvar');
+    // Deixa claro o que o clique vai fazer — ou por que não dá para clicar.
+    if (saving) saveBtn.textContent = 'Salvando…';
+    else if (!state.authConfigured) saveBtn.textContent = 'Edição indisponível';
+    else saveBtn.textContent = state.authorized ? 'Salvar' : 'Entrar e salvar';
     footer.classList.toggle('is-dirty', isDirty());
   }
 
@@ -242,19 +275,10 @@ export function tickerDetailView(params, outlet) {
 
     if (!draft) draft = toDraft(ticker);
 
-    content.append(header(), posicao(), alvos(), classificacao(),
+    content.append(header(), editNotice(), posicao(), alvos(), classificacao(),
       textBlock('Tese curta', 'tese', 'Por que você tem (ou quer) este papel'),
       textBlock('Notícia / Observação', 'noticia', 'Fatos recentes, contexto'),
       meta());
-
-    if (!state.online) {
-      content.appendChild(el('p', { class: 'notice notice--warn' },
-        'Sem conexão: os campos ficam somente leitura até a rede voltar.'));
-    } else if (!state.authorized) {
-      content.appendChild(el('p', { class: 'notice notice--info' },
-        'Consultar é livre, mas salvar exige entrar com a conta Google que edita '
-        + 'a planilha. O login é pedido no momento de salvar e vale por algumas horas.'));
-    }
 
     root.appendChild(footer);
     refreshFooter();
