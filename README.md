@@ -28,7 +28,9 @@ sw.js                 Service worker (cache do app + dos dados)
 icons/                Ícones 192/512 + maskable
 styles/app.css        Todo o CSS
 src/
-  config.js           >>> SPREADSHEET_ID e API_KEY ficam aqui <<<
+  config.js           >>> SPREADSHEET_ID, API_KEY e GOOGLE_CLIENT_ID <<<
+  version.js          Versão em execução (carimbada no deploy)
+  updater.js          Checa se há versão nova a cada abertura do app
   main.js             Entrada: rotas, navegação, service worker
   router.js           Roteador por hash
   store.js            Estado, cache offline e chamadas de rede
@@ -261,8 +263,36 @@ Se mesmo assim aparecer **"Get Pages site failed ... Not Found"**, é porque a
 conta não deixou o workflow ligar o Pages sozinho. Nesse caso, habilite à mão
 em **Settings → Pages → Source: GitHub Actions** e rode o workflow de novo.
 
-**Ao alterar arquivos do app**, suba o `CACHE_VERSION` em `sw.js` (`v1` → `v2`)
-para que o service worker descarte o cache antigo nos celulares já instalados.
+### Versionamento e cache
+
+Não há nada para subir à mão. O workflow carimba o SHA do commit em `sw.js`,
+`src/version.js` e num `version.json` gerado na hora. Como o `sw.js` muda de
+bytes a cada deploy, o navegador reinstala o service worker e descarta o cache
+antigo sozinho.
+
+> Antes isso dependia de lembrar de subir uma constante `CACHE_VERSION`. Não
+> funcionou: um deploy alterou o `config.js` sem tocar no `sw.js`, e os celulares
+> com o app instalado continuaram servindo a versão velha do arquivo. Por isso o
+> carimbo virou automático, e o deploy **falha** se ele não for aplicado.
+
+O app verifica a versão **toda vez que é aberto** e toda vez que volta ao
+primeiro plano, de três formas independentes:
+
+1. `registration.update()`, que força a releitura do `sw.js` em vez de esperar a
+   heurística do navegador;
+2. comparação com `version.json`, buscado com `cache: no-store` — é o que
+   responde "estou na última versão?" mesmo com o service worker travado;
+3. `controllerchange`: quando um service worker novo assume, a página recarrega
+   uma vez, para não ficar metade velha e metade nova.
+
+Se houver **edição não salva**, a recarga automática não acontece: aparece a
+barra "Nova versão disponível" e quem decide a hora é você.
+
+A versão em execução fica visível no rodapé do dashboard (`versão a1b2c3d`),
+para conferir no próprio celular se o que está rodando é o último deploy.
+
+O cache de dados (última leitura da planilha, usada no modo offline) **não** é
+versionado de propósito — seria cruel apagar o histórico offline a cada deploy.
 
 ## Como a planilha é lida e escrita
 

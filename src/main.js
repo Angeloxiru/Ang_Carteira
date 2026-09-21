@@ -9,6 +9,7 @@ import { logView } from './views/log.js';
 import { statsView } from './views/stats.js';
 import { state, hydrateFromCache, refreshAll, subscribe, restoreSession } from './store.js';
 import { STALE_MS } from './config.js';
+import { initUpdater, applyUpdate, checkForUpdate } from './updater.js';
 
 /* --------------------------------- Rotas ---------------------------------- */
 
@@ -53,6 +54,20 @@ function buildNav() {
   return nav;
 }
 
+/* ---------------------------- Nova versão disponível ------------------------ */
+
+/* Só aparece quando a atualização não pôde ser aplicada sozinha — ou seja,
+   quando há edição pendente. Na abertura do app o updater aplica direto. */
+function buildUpdateBanner() {
+  const banner = el('div', { class: 'updatebar', hidden: true },
+    el('span', null, 'Nova versão disponível'),
+    el('button', {
+      class: 'updatebar__btn', type: 'button', onclick: () => applyUpdate(),
+    }, 'Atualizar'),
+  );
+  return { banner, show: () => { banner.hidden = false; } };
+}
+
 /* ------------------------------ Indicador offline -------------------------- */
 
 function buildOfflineBanner() {
@@ -67,8 +82,9 @@ function buildOfflineBanner() {
 
 const app = document.getElementById('app');
 const outlet = el('main', { class: 'outlet', id: 'outlet' });
+const updates = buildUpdateBanner();
 
-app.append(buildOfflineBanner(), outlet, buildNav());
+app.append(updates.banner, buildOfflineBanner(), outlet, buildNav());
 
 hydrateFromCache();
 start(outlet);
@@ -83,14 +99,12 @@ document.addEventListener('visibilitychange', () => {
   if (age > STALE_MS) refreshAll();
 });
 
+// Ao voltar online, vale reconferir a versão além dos dados.
+window.addEventListener('online', () => checkForUpdate({ force: true }));
+
 window.addEventListener('online', () => refreshAll());
 
-/* ---------------------------- Service worker ------------------------------ */
+/* ------------------- Service worker e checagem de versão ------------------- */
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Caminho relativo: funciona tanto em user.github.io/repo/ quanto na raiz.
-    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url))
-      .catch((err) => console.warn('Service worker não registrado:', err));
-  });
-}
+// Registra o service worker e verifica a versão a cada abertura do app.
+initUpdater({ onReady: updates.show });
